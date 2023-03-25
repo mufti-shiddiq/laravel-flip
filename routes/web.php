@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TransferController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,4 +16,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::prefix('transfer')->group(function () {
+    Route::get('/', [TransferController::class, 'index'])->name('transfer.index');
+    Route::get('/bank', [TransferController::class, 'bank'])->name('transfer.bank');
+    Route::get('/inquiry', [TransferController::class, 'inquiry'])->name('transfer.inquiry');
+    Route::post('/inquiry', [TransferController::class, 'storeInquiry'])->name('transfer.storeInquiry');
 });

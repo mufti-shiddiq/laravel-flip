@@ -14,9 +14,22 @@
     <div class="container">
         <div class="row my-3">
             <h3>Riwayat Transfer</h3>
+
+            @if (session('status'))
+                <div class="alert alert-success">
+                    {{ session('status') }}
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="alert alert-danger">
+                    {{ session('error') }}
+                </div>
+            @endif
+
         </div>
         <div class="row mb-3">
             <div class="col-6">
+                <a href="{{ route('transfer.create') }}" class="btn btn-primary btn">Create Disbursement</a>
                 <a href="{{ route('transfer.inquiry') }}" class="btn btn-primary btn">Cek Rekening</a>
                 <a href="{{ route('transfer.bank') }}" class="btn btn-primary btn">List Bank</a>
             </div>
@@ -26,6 +39,7 @@
                 <thead>
                     <tr>
                         <th scope="col">#</th>
+                        <th scope="col">External ID</th>
                         <th scope="col">Timestamp</th>
                         <th scope="col">Bank Code</th>
                         <th scope="col">Account Number</th>
@@ -42,6 +56,7 @@
                     @foreach ($data as $index => $item)
                         <tr>
                             <th scope="row">{{ $index + 1 }}</th>
+                            <td>{{ $item->external_id }}</td>
                             <td>{{ $item->created_at }}</td>
                             <td>{{ $item->bank_code }}</td>
                             <td>{{ $item->account_number }}</td>
@@ -49,10 +64,20 @@
                             <td>{{ $item->remark }}</td>
                             <td>{{ number_format($item->amount, 0, ',', '.') }}</td>
                             <td>{{ number_format($item->fee, 0, ',', '.') }}</td>
-                            <td>{{ $item->status }}</td>
+                            <td>
+                                @if ($item->status == 'DONE')
+                                <span class="badge bg-success">DONE</span>
+                                @elseif ($item->status == 'PENDING')
+                                <span class="badge bg-warning text-dark">PENDING</span>
+                                @else
+                                <span class="badge bg-danger">{{ $item->status }}</span>
+                                @endif
+                            </td>
                             <td>{{ $item->time_served }}</td>
                             <td>
-                                <a href="{{ $item->receipt }}" class="btn btn-primary btn">SHOW</a>
+                                @if ($item->receipt != null)
+                                <a href="{{ $item->receipt }}" target="_blank" class="btn btn-primary btn">SHOW</a>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

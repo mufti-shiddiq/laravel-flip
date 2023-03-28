@@ -15,11 +15,15 @@ use App\Http\Controllers\TransferController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    // return view('welcome');
+    return redirect()->route('transfer.index');
 });
 
 Route::prefix('transfer')->group(function () {
     Route::get('/', [TransferController::class, 'index'])->name('transfer.index');
+    Route::get('/create', [TransferController::class, 'create'])->name('transfer.create');
+    Route::post('/create', [TransferController::class, 'store'])->name('transfer.store');
+    Route::post('/callback', [TransferController::class, 'callback']);
     Route::get('/bank', [TransferController::class, 'bank'])->name('transfer.bank');
     Route::get('/inquiry', [TransferController::class, 'inquiry'])->name('transfer.inquiry');
     Route::post('/inquiry', [TransferController::class, 'storeInquiry'])->name('transfer.storeInquiry');

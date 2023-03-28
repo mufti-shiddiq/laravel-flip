@@ -24,12 +24,108 @@ class TransferController extends Controller
 
     public function create()
     {
-        //
+        // Request Bank Info
+        $requestBankInfo = Http::withHeaders([
+            'Authorization' => $this->secretKey,
+            'Content-Type' => 'application/x-www-form-urlencoded'
+        ])->get(config('flip.base_url_v2') . '/general/banks');
+
+        $banks = $requestBankInfo->object();
+
+        return view('transfer.create', compact('banks'));
     }
 
     public function store(Request $request)
     {
-        //
+        // Request Bank Info
+        $requestBankInfo = Http::withHeaders([
+            'Authorization' => $this->secretKey,
+            'Content-Type' => 'application/x-www-form-urlencoded'
+        ])->get(config('flip.base_url_v2') . '/general/banks?code=' . $request->bank_code);
+
+        $bank = $requestBankInfo->object();
+
+        // Return error if bank not operational
+        if ($bank[0]->status != 'OPERATIONAL') {
+            return back()->withInput()->with('error', 'SORRY, BANK ' . $bank[0]->status);
+        }
+
+        // Request Bank Account Inquiry
+        do {
+            $requestInquiry = Http::withHeaders([
+                'Authorization' => $this->secretKey
+            ])->post(config('flip.base_url_v2') . '/disbursement/bank-account-inquiry', [
+                'bank_code' => $request->bank_code,
+                'account_number' => $request->account_number
+            ]);
+
+            $responseInquiry = $requestInquiry->object();
+        } while ($responseInquiry->status == 'PENDING');
+
+        // If Account Inquiry SUCCESS
+        if ($responseInquiry->status == 'SUCCESS') {
+
+            // Generate Idempotency Key
+            $idempotencyKey = bin2hex(random_bytes(16));
+
+            // Create Disbursement
+            $createDisbursement = Http::withHeaders([
+                'Authorization' => $this->secretKey,
+                'idempotency-key' => $idempotencyKey
+            ])->post(config('flip.base_url_v3') . '/disbursement', [
+                'bank_code' => $request->bank_code,
+                'account_number' => $request->account_number,
+                'amount' => $request->amount,
+                'remark' => $request->remark
+            ]);
+
+            $response = $createDisbursement->object();
+
+            if ($response->status != 'CANCELLED') {
+                if ($response->time_served == '(not set)') {
+                    $response->time_served = null;
+                }
+
+                Transfer::create([
+                    'external_id' => $response->id,
+                    'bank_code' => $response->bank_code,
+                    'account_number' => $response->account_number,
+                    'recipient_name' => $response->recipient_name,
+                    'remark' => $response->remark,
+                    'sender_bank' => $response->sender_bank,
+                    'sender' => $response->sender,
+                    'amount' => $response->amount,
+                    'fee' => $response->fee,
+                    'status' => $response->status,
+                    'time_served' => $response->time_served,
+                    'receipt' => $response->receipt
+                ]);
+
+                return redirect()->route('transfer.index')->with('status', 'Transaksi sedang diproses...');
+            }
+
+            return back()->withInput()->with('error', $response->status);
+        }
+
+        return back()->withInput()->with('error', $responseInquiry->status);
+    }
+
+    public function callback()
+    {
+        $response = request()->data;
+        $data = json_decode($response);
+
+        if ($data->time_served == '(not set)') {
+            $data->time_served = null;
+        }
+
+        $update = Transfer::where('external_id', $data->id)->update([
+            'status' => $data->status,
+            'time_served' => $data->time_served,
+            'receipt' => $data->receipt
+        ]);
+
+        return response($update);
     }
 
     public function show($id)

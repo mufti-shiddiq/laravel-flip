@@ -21,11 +21,11 @@ return new class extends Migration
             $table->string('recipient_name');
             $table->string('remark')->nullable();
             $table->string('sender_bank')->nullable();
-            $table->string('sender')->nullable();
             $table->integer('amount');
             $table->integer('fee');
             $table->string('status');
             $table->dateTime('time_served', $precision = 0)->nullable();
+            $table->string('reason')->nullable();
             $table->text('receipt')->nullable();
             $table->timestamps();
         });

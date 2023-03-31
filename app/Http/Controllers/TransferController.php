@@ -93,7 +93,6 @@ class TransferController extends Controller
                     'recipient_name' => $response->recipient_name,
                     'remark' => $response->remark,
                     'sender_bank' => $response->sender_bank,
-                    'sender' => $response->sender,
                     'amount' => $response->amount,
                     'fee' => $response->fee,
                     'status' => $response->status,
@@ -115,12 +114,14 @@ class TransferController extends Controller
         $response = request()->data;
         $data = json_decode($response);
 
-        if ($data->time_served == '(not set)') {
+        if ($data->status != 'DONE') {
             $data->time_served = null;
         }
 
         $update = Transfer::where('external_id', $data->id)->update([
             'status' => $data->status,
+            'reason' => $data->reason,
+            'sender_bank' => $data->sender_bank,
             'time_served' => $data->time_served,
             'receipt' => $data->receipt
         ]);
